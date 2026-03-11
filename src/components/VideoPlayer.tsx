@@ -56,8 +56,8 @@ export default function VideoPlayer({ src, className = '', autoPlay = false, mut
         </div>
       )}
 
-      {/* Controls overlay */}
-      <div className="absolute bottom-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Controls overlay — always visible on mobile, hover-only on desktop */}
+      <div className="absolute bottom-3 right-3 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         <button
           onClick={toggleMute}
           className="bg-black/60 rounded-full p-2 text-white hover:bg-black/80 transition"
