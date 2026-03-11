@@ -103,22 +103,26 @@ export default function UploadForm({ user }: UploadFormProps) {
       }
       setProgress(80)
 
-      const { error: dbError } = await supabase.from('videos').insert({
+      const insertPayload: Record<string, unknown> = {
         user_id: currentUser.id,
         title: title.trim(),
         description: description.trim() || null,
         video_url: videoUrl,
-        audio_url: audioUrl,
-      })
+      }
+      if (audioUrl) insertPayload.audio_url = audioUrl
+
+      const { error: dbError } = await supabase.from('videos').insert(insertPayload)
       console.log('[UploadForm] insert user_id:', currentUser.id, 'dbError:', dbError)
 
-      if (dbError) throw dbError
+      if (dbError) throw new Error(dbError.message)
       setProgress(100)
 
       router.push('/')
       router.refresh()
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Upload failed. Please try again.')
+      const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.'
+      setError(msg)
+      console.error('[UploadForm] error:', err)
       setUploading(false)
       setProgress(0)
     }
