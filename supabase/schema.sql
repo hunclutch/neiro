@@ -17,6 +17,7 @@ create table public.videos (
   title text not null,
   description text,
   video_url text not null,
+  audio_url text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

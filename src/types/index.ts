@@ -12,6 +12,7 @@ export type Video = {
   title: string
   description: string | null
   video_url: string
+  audio_url: string | null
   created_at: string
   profiles?: Profile
   likes_count?: number

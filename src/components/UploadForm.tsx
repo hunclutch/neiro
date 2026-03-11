@@ -14,10 +14,13 @@ export default function UploadForm({ user }: UploadFormProps) {
   const [description, setDescription] = useState('')
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [audioFile, setAudioFile] = useState<File | null>(null)
+  const [audioName, setAudioName] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
+  const audioRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -37,6 +40,22 @@ export default function UploadForm({ user }: UploadFormProps) {
     setPreview(URL.createObjectURL(selected))
   }
 
+  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0]
+    if (!selected) return
+    if (!selected.type.startsWith('audio/')) {
+      setError('Please select an audio file.')
+      return
+    }
+    if (selected.size > 50 * 1024 * 1024) {
+      setError('Audio file must be under 50MB.')
+      return
+    }
+    setError(null)
+    setAudioFile(selected)
+    setAudioName(selected.name)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || !title.trim()) {
@@ -53,25 +72,43 @@ export default function UploadForm({ user }: UploadFormProps) {
       console.log('[UploadForm] currentUser:', currentUser)
       if (!currentUser) throw new Error('Not authenticated. Please log in again.')
 
-      const ext = file.name.split('.').pop()
-      const fileName = `${currentUser.id}/${Date.now()}.${ext}`
+      // Upload video
+      const videoExt = file.name.split('.').pop()
+      const videoFileName = `${currentUser.id}/${Date.now()}.${videoExt}`
 
       const { error: uploadError } = await supabase.storage
         .from('videos')
-        .upload(fileName, file, { cacheControl: '3600', upsert: false })
+        .upload(videoFileName, file, { cacheControl: '3600', upsert: false })
 
       if (uploadError) throw uploadError
-      setProgress(70)
+      setProgress(50)
 
-      const { data: urlData } = supabase.storage.from('videos').getPublicUrl(fileName)
-      const videoUrl = urlData.publicUrl
-      setProgress(85)
+      const { data: videoUrlData } = supabase.storage.from('videos').getPublicUrl(videoFileName)
+      const videoUrl = videoUrlData.publicUrl
+
+      // Upload audio (optional)
+      let audioUrl: string | null = null
+      if (audioFile) {
+        const audioExt = audioFile.name.split('.').pop()
+        const audioFileName = `audio/${currentUser.id}/${Date.now()}.${audioExt}`
+
+        const { error: audioUploadError } = await supabase.storage
+          .from('videos')
+          .upload(audioFileName, audioFile, { cacheControl: '3600', upsert: false })
+
+        if (audioUploadError) throw audioUploadError
+
+        const { data: audioUrlData } = supabase.storage.from('videos').getPublicUrl(audioFileName)
+        audioUrl = audioUrlData.publicUrl
+      }
+      setProgress(80)
 
       const { error: dbError } = await supabase.from('videos').insert({
         user_id: currentUser.id,
         title: title.trim(),
         description: description.trim() || null,
         video_url: videoUrl,
+        audio_url: audioUrl,
       })
       console.log('[UploadForm] insert user_id:', currentUser.id, 'dbError:', dbError)
 
@@ -123,7 +160,7 @@ export default function UploadForm({ user }: UploadFormProps) {
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Name your intro..."
+          placeholder="Name your video..."
           maxLength={100}
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
         />
@@ -135,11 +172,57 @@ export default function UploadForm({ user }: UploadFormProps) {
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Tell others about this intro..."
+          placeholder="Tell others about this video..."
           rows={3}
           maxLength={500}
           className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition resize-none"
         />
+      </div>
+
+      {/* Audio intro track (optional) */}
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Intro Audio Track
+          <span className="ml-2 text-xs text-gray-500 font-normal">Optional — others can use this when covering your video</span>
+        </label>
+        <div
+          onClick={() => audioRef.current?.click()}
+          className="flex items-center gap-3 border border-white/10 hover:border-blue-500 rounded-xl px-4 py-3 cursor-pointer transition-colors group"
+        >
+          <input
+            ref={audioRef}
+            type="file"
+            accept="audio/*"
+            onChange={handleAudioChange}
+            className="hidden"
+          />
+          <div className="w-9 h-9 rounded-full bg-blue-600/20 group-hover:bg-blue-600/40 flex items-center justify-center shrink-0 transition-colors">
+            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+          </div>
+          {audioName ? (
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-medium truncate">{audioName}</p>
+              <p className="text-gray-500 text-xs">Click to change</p>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm group-hover:text-gray-400 transition-colors">
+              Click to select audio — MP3, WAV, AAC · Max 50MB
+            </p>
+          )}
+          {audioName && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setAudioFile(null); setAudioName(null) }}
+              className="text-gray-500 hover:text-red-400 transition-colors shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -166,7 +249,7 @@ export default function UploadForm({ user }: UploadFormProps) {
         disabled={uploading || !file || !title.trim()}
         className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-white transition-colors"
       >
-        {uploading ? 'Uploading...' : 'Publish Intro'}
+        {uploading ? 'Uploading...' : 'Publish Video'}
       </button>
     </form>
   )

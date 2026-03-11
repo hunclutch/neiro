@@ -89,13 +89,30 @@ export default function CoverForm({ originalVideo, user }: CoverFormProps) {
     <div className="space-y-8">
       {/* Original video */}
       <div>
-        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Original Intro</h2>
+        <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Original Video</h2>
         <div className="rounded-2xl overflow-hidden bg-black aspect-video">
           <VideoPlayer src={originalVideo.video_url} className="w-full h-full" />
         </div>
         <p className="mt-2 text-white font-semibold">{originalVideo.title}</p>
         <p className="text-gray-400 text-sm">by @{originalVideo.profiles?.username}</p>
       </div>
+
+      {/* Intro audio track */}
+      {originalVideo.audio_url && (
+        <div className="bg-blue-600/10 border border-blue-600/30 rounded-2xl p-4">
+          <p className="text-sm font-medium text-blue-300 mb-2 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+            Intro Audio Track — use this as your backing track
+          </p>
+          <audio
+            src={originalVideo.audio_url}
+            controls
+            className="w-full h-10"
+          />
+        </div>
+      )}
 
       {/* Divider */}
       <div className="flex items-center gap-3">
