@@ -39,6 +39,15 @@ create table public.likes (
   unique(user_id, video_id)
 );
 
+-- Comments table
+create table public.comments (
+  id uuid default uuid_generate_v4() primary key,
+  video_id uuid references public.videos(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  content text not null check (char_length(content) <= 500),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- ========================
 -- Row Level Security (RLS)
 -- ========================
@@ -47,6 +56,7 @@ alter table public.profiles enable row level security;
 alter table public.videos enable row level security;
 alter table public.covers enable row level security;
 alter table public.likes enable row level security;
+alter table public.comments enable row level security;
 
 -- Profiles: anyone can read, only owner can update
 create policy "Profiles are publicly viewable" on public.profiles
@@ -123,3 +133,13 @@ create trigger on_auth_user_created
 --   for insert with check (bucket_id = 'videos' and auth.role() = 'authenticated');
 -- create policy "Users can delete their own videos" on storage.objects
 --   for delete using (bucket_id = 'videos' and auth.uid()::text = (storage.foldername(name))[1]);
+
+-- Comments RLS
+create policy "Comments are publicly viewable" on public.comments
+  for select using (true);
+
+create policy "Authenticated users can insert comments" on public.comments
+  for insert with check (auth.uid() = user_id);
+
+create policy "Users can delete their own comments" on public.comments
+  for delete using (auth.uid() = user_id);

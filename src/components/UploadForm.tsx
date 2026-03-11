@@ -112,7 +112,6 @@ export default function UploadForm({ user }: UploadFormProps) {
       if (audioUrl) insertPayload.audio_url = audioUrl
 
       const { error: dbError } = await supabase.from('videos').insert(insertPayload)
-      console.log('[UploadForm] insert user_id:', currentUser.id, 'dbError:', dbError)
 
       if (dbError) throw new Error(dbError.message)
       setProgress(100)

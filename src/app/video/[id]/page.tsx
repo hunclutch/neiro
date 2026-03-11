@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import VideoPlayer from '@/components/VideoPlayer'
 import LikeButton from '@/components/LikeButton'
+import CommentSection from '@/components/CommentSection'
+import DeleteVideoButton from '@/components/DeleteVideoButton'
 
 interface VideoPageProps {
   params: Promise<{ id: string }>
@@ -24,16 +26,22 @@ export default async function VideoPage({ params }: VideoPageProps) {
 
   if (!video) notFound()
 
-  const { data: covers } = await supabase
-    .from('covers')
-    .select(`*, profiles (id, username, avatar_url)`)
-    .eq('original_video_id', id)
-    .order('created_at', { ascending: false })
-
-  const { count: likesCount } = await supabase
-    .from('likes')
-    .select('*', { count: 'exact', head: true })
-    .eq('video_id', id)
+  const [{ data: covers }, { count: likesCount }, { data: comments }] = await Promise.all([
+    supabase
+      .from('covers')
+      .select(`*, profiles (id, username, avatar_url)`)
+      .eq('original_video_id', id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('likes')
+      .select('*', { count: 'exact', head: true })
+      .eq('video_id', id),
+    supabase
+      .from('comments')
+      .select(`*, profiles (id, username, avatar_url)`)
+      .eq('video_id', id)
+      .order('created_at', { ascending: false }),
+  ])
 
   let userHasLiked = false
   if (user) {
@@ -45,6 +53,8 @@ export default async function VideoPage({ params }: VideoPageProps) {
       .maybeSingle()
     userHasLiked = !!like
   }
+
+  const isOwner = user?.id === video.user_id
 
   return (
     <div className="min-h-screen pt-16 pb-10">
@@ -75,20 +85,26 @@ export default async function VideoPage({ params }: VideoPageProps) {
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <LikeButton
               videoId={video.id}
               initialLiked={userHasLiked}
               initialCount={likesCount ?? 0}
               user={user}
             />
-
             <Link
               href={`/cover/${video.id}`}
               className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 transition-colors text-white text-sm font-medium"
             >
               <span>🎤</span> Cover
             </Link>
+            {isOwner && (
+              <DeleteVideoButton
+                videoId={video.id}
+                videoUrl={video.video_url}
+                audioUrl={video.audio_url ?? null}
+              />
+            )}
           </div>
         </div>
 
@@ -130,6 +146,13 @@ export default async function VideoPage({ params }: VideoPageProps) {
             </div>
           )}
         </div>
+
+        {/* Comments section */}
+        <CommentSection
+          videoId={video.id}
+          initialComments={comments ?? []}
+          user={user}
+        />
       </div>
     </div>
   )

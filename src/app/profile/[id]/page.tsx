@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import VideoPlayer from '@/components/VideoPlayer'
+import DeleteVideoButton from '@/components/DeleteVideoButton'
 
 interface ProfilePageProps {
   params: Promise<{ id: string }>
@@ -12,6 +13,8 @@ interface ProfilePageProps {
 export default async function ProfilePage({ params }: ProfilePageProps) {
   const { id } = await params
   const supabase = await createClient()
+
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
 
   const { data: profile } = await supabase
     .from('profiles')
@@ -39,6 +42,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     covers_count: v.covers_count?.[0]?.count ?? 0,
   }))
 
+  const isOwner = currentUser?.id === id
+
   return (
     <div className="min-h-screen pt-20 pb-10 px-4">
       <div className="max-w-4xl mx-auto">
@@ -51,32 +56,43 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             <h1 className="text-2xl font-bold text-white">@{profile.username}</h1>
             {profile.bio && <p className="text-gray-400 mt-1">{profile.bio}</p>}
             <div className="flex gap-4 mt-2 text-sm text-gray-400">
-              <span><span className="text-white font-semibold">{enrichedVideos.length}</span> intros</span>
+              <span><span className="text-white font-semibold">{enrichedVideos.length}</span> videos</span>
               <span><span className="text-white font-semibold">{covers?.length ?? 0}</span> covers</span>
             </div>
           </div>
         </div>
 
-        {/* Intros */}
+        {/* Videos */}
         <section className="mb-10">
-          <h2 className="text-lg font-bold text-white mb-4">🎵 Intros</h2>
+          <h2 className="text-lg font-bold text-white mb-4">🎵 Videos</h2>
           {!enrichedVideos.length ? (
-            <p className="text-gray-500 text-sm">No intros uploaded yet.</p>
+            <p className="text-gray-500 text-sm">No videos uploaded yet.</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {enrichedVideos.map((video) => (
-                <Link key={video.id} href={`/video/${video.id}`} className="group">
-                  <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
-                    <VideoPlayer src={video.video_url} className="w-full h-full" muted />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
-                      <span className="text-white text-xs font-medium truncate">{video.title}</span>
+                <div key={video.id} className="group">
+                  <Link href={`/video/${video.id}`}>
+                    <div className="aspect-video bg-black rounded-xl overflow-hidden relative">
+                      <VideoPlayer src={video.video_url} className="w-full h-full" muted />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                        <span className="text-white text-xs font-medium truncate">{video.title}</span>
+                      </div>
                     </div>
+                  </Link>
+                  <div className="mt-1 flex items-center justify-between">
+                    <div className="flex gap-3 text-xs text-gray-400">
+                      <span>👍 {video.likes_count}</span>
+                      <span>🎤 {video.covers_count}</span>
+                    </div>
+                    {isOwner && (
+                      <DeleteVideoButton
+                        videoId={video.id}
+                        videoUrl={video.video_url}
+                        audioUrl={video.audio_url ?? null}
+                      />
+                    )}
                   </div>
-                  <div className="mt-1 flex gap-3 text-xs text-gray-400">
-                    <span>👍 {video.likes_count}</span>
-                    <span>🎤 {video.covers_count}</span>
-                  </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}
