@@ -50,6 +50,7 @@ export default function UploadForm({ user }: UploadFormProps) {
 
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
+      console.log('[UploadForm] currentUser:', currentUser)
       if (!currentUser) throw new Error('Not authenticated. Please log in again.')
 
       const ext = file.name.split('.').pop()
@@ -72,6 +73,7 @@ export default function UploadForm({ user }: UploadFormProps) {
         description: description.trim() || null,
         video_url: videoUrl,
       })
+      console.log('[UploadForm] insert user_id:', currentUser.id, 'dbError:', dbError)
 
       if (dbError) throw dbError
       setProgress(100)
