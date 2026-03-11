@@ -50,8 +50,11 @@ export default function CoverForm({ originalVideo, user }: CoverFormProps) {
     setProgress(10)
 
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('Not authenticated. Please log in again.')
+
       const ext = file.name.split('.').pop()
-      const fileName = `covers/${user.id}/${Date.now()}.${ext}`
+      const fileName = `covers/${currentUser.id}/${Date.now()}.${ext}`
 
       const { error: uploadError } = await supabase.storage
         .from('videos')
@@ -66,7 +69,7 @@ export default function CoverForm({ originalVideo, user }: CoverFormProps) {
 
       const { error: dbError } = await supabase.from('covers').insert({
         original_video_id: originalVideo.id,
-        user_id: user.id,
+        user_id: currentUser.id,
         cover_video_url: coverVideoUrl,
       })
 

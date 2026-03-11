@@ -49,8 +49,11 @@ export default function UploadForm({ user }: UploadFormProps) {
     setProgress(10)
 
     try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('Not authenticated. Please log in again.')
+
       const ext = file.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${ext}`
+      const fileName = `${currentUser.id}/${Date.now()}.${ext}`
 
       const { error: uploadError } = await supabase.storage
         .from('videos')
@@ -64,7 +67,7 @@ export default function UploadForm({ user }: UploadFormProps) {
       setProgress(85)
 
       const { error: dbError } = await supabase.from('videos').insert({
-        user_id: user.id,
+        user_id: currentUser.id,
         title: title.trim(),
         description: description.trim() || null,
         video_url: videoUrl,
