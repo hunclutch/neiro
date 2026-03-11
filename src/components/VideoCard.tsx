@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import VideoPlayer from '@/components/VideoPlayer'
+import FeedCommentPanel from '@/components/FeedCommentPanel'
 import type { Video } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import type { User } from '@supabase/supabase-js'
@@ -18,6 +19,7 @@ export default function VideoCard({ video, user, autoPlay = false }: VideoCardPr
   const [liked, setLiked] = useState(video.user_has_liked ?? false)
   const [likesCount, setLikesCount] = useState(video.likes_count ?? 0)
   const [loading, setLoading] = useState(false)
+  const [commentOpen, setCommentOpen] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -98,9 +100,17 @@ export default function VideoCard({ video, user, autoPlay = false }: VideoCardPr
           {/* Like */}
           <button onClick={handleLike} className="flex flex-col items-center gap-1 group">
             <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${liked ? 'bg-blue-600 scale-110' : 'bg-white/10 group-hover:bg-white/20'}`}>
-              <span className="text-xl">{liked ? '👍' : '👍'}</span>
+              <span className="text-xl">👍</span>
             </div>
             <span className="text-white text-xs font-medium">{likesCount}</span>
+          </button>
+
+          {/* Comment */}
+          <button onClick={() => setCommentOpen(true)} className="flex flex-col items-center gap-1 group">
+            <div className="w-11 h-11 rounded-full bg-white/10 group-hover:bg-white/20 flex items-center justify-center transition-all">
+              <span className="text-xl">💬</span>
+            </div>
+            <span className="text-white text-xs font-medium">Comment</span>
           </button>
 
           {/* Cover */}
@@ -127,6 +137,15 @@ export default function VideoCard({ video, user, autoPlay = false }: VideoCardPr
             <span className="text-white text-xs font-medium">Share</span>
           </button>
         </div>
+
+        {/* Comment panel overlay */}
+        {commentOpen && (
+          <FeedCommentPanel
+            videoId={video.id}
+            user={user}
+            onClose={() => setCommentOpen(false)}
+          />
+        )}
       </div>
     </div>
   )
